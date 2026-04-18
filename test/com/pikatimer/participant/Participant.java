@@ -1,7 +1,10 @@
 package com.pikatimer.participant;
 
+import com.pikatimer.race.Wave;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,6 +13,7 @@ public class Participant {
     private String sex = "";
     private Integer age;
     private final Map<Integer, StringProperty> customAttributes = new HashMap<>();
+    private final ObservableList<Wave> waves = FXCollections.observableArrayList();
 
     public String getBib() {
         return bib;
@@ -48,5 +52,9 @@ public class Participant {
             return age == null ? "" : age.toString();
         }
         return "";
+    }
+
+    public ObservableList<Wave> wavesObservableList() {
+        return waves;
     }
 }
