@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.RowConstraints?>
@@ -26,7 +27,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 <ScrollPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="150.0" xmlns="http://javafx.com/javafx/8.0.60" xmlns:fx="http://javafx.com/fxml/1">
    <content>
-      <GridPane fx:id="mapGridPane" alignment="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="35.0" prefWidth="379.0">
+      <VBox alignment="TOP_CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefWidth="379.0" spacing="10.0">
+         <children>
+            <Label fx:id="statusLabel" alignment="CENTER" focusTraversable="false" maxWidth="1.7976931348623157E308" text="" wrapText="true">
+               <font>
+                  <Font size="14.0" />
+               </font>
+            </Label>
+            <GridPane fx:id="mapGridPane" alignment="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="35.0" prefWidth="379.0">
          <columnConstraints>
             <ColumnConstraints hgrow="SOMETIMES" maxWidth="1.7976931348623157E308" minWidth="136.0" prefWidth="136.0" />
             <ColumnConstraints hgrow="SOMETIMES" maxWidth="1.7976931348623157E308" minWidth="-Infinity" prefWidth="220.0" />
@@ -46,6 +54,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                </font>
             </Label>
          </children>
-      </GridPane>
+            </GridPane>
+         </children>
+      </VBox>
    </content>
 </ScrollPane>

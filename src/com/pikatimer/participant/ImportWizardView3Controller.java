@@ -33,6 +33,7 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -142,17 +143,37 @@ public class ImportWizardView3Controller {
                // Let's play the "What type of text file is this..." game
                // Try UTF-8 and see if it blows up on the decode. If it does, default down to a platform specific type and then hope for the best
                // TODO: fix the "platform specific" part to not assume Windows in the US
-               CharsetDecoder uft8Decoder = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT);
+               // (Only the local-file path needs this; the URL path imports a
+               // ResultSet that the provider already fetched and parsed.)
                String charset = "UTF-8"; 
-               try {
-                    String result = new BufferedReader(new InputStreamReader(new FileInputStream(model.getFileName()),uft8Decoder)).lines().collect(Collectors.joining("\n"));
-                } catch (Exception ex) {
-                    System.out.println("Not UTF-8: " + ex.getMessage());
-                    charset = "Cp1252"; // Windows standard txt file stuff
-                }
+               if (model.getSelectedRemoteEvent() == null) {
+                   CharsetDecoder uft8Decoder = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT);
+                   try {
+                        String result = new BufferedReader(new InputStreamReader(new FileInputStream(model.getFileName()),uft8Decoder)).lines().collect(Collectors.joining("\n"));
+                    } catch (Exception ex) {
+                        System.out.println("Not UTF-8: " + ex.getMessage());
+                        charset = "Cp1252"; // Windows standard txt file stuff
+                    }
+               }
                 
                try {
-                    ResultSet rs = new Csv().read(model.getFileName(),null,charset);
+                    ResultSet rs;
+                    if (model.getSelectedRemoteEvent() != null) {
+                        // URL import path: import from the participant
+                        // ResultSet fetched in View2. Rewind it first so a
+                        // re-entered View3 (or a back/forward revisit) can
+                        // iterate it again; H2's SimpleResultSet supports it.
+                        rs = model.getResultSet();
+                        if (rs != null) {
+                            try {
+                                rs.beforeFirst();
+                            } catch (SQLException ex) {
+                                Logger.getLogger(ImportWizardView3Controller.class.getName()).log(Level.WARNING, "Unable to rewind participants ResultSet", ex);
+                            }
+                        }
+                    } else {
+                        rs = new Csv().read(model.getFileName(),null,charset);
+                    }
                     ResultSetMetaData meta = rs.getMetaData();
                     
                     Map<String,Participant> existingMap = new HashMap();
@@ -183,7 +204,12 @@ public class ImportWizardView3Controller {
                                     pendingWave = rs.getString(i+1);
                                 } else if (key.equals("RACE")) {
                                     pendingRace = rs.getString(i+1);
-                                } else if (key.matches("^\\d$")) {
+                                } else if (key.matches("\\d+")) {
+                                    // Custom attribute IDs are stored as their
+                                    // DB id (see View2's customKey); the
+                                    // increment generator produces 2-digit ids
+                                    // past the 9th definition, so match all
+                                    // digits, not just 0-9.
                                     customAttributes.put(Integer.parseInt(key), rs.getString(i+1));
                                 } else {
                                     attributes.put(key,rs.getString(i+1));

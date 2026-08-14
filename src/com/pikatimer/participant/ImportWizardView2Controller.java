@@ -17,31 +17,38 @@
 package com.pikatimer.participant;
 
 import com.pikatimer.race.RaceDAO;
+import com.pikatimer.util.CharsetDetector;
 import io.datafx.controller.FXMLController;
 import io.datafx.controller.flow.FlowException;
 import io.datafx.controller.flow.context.FXMLViewFlowContext;
 import io.datafx.controller.flow.context.ViewFlowContext;
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CodingErrorAction;
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.layout.GridPane;
 import javax.annotation.PostConstruct;
 import org.h2.tools.Csv;
@@ -55,12 +62,197 @@ public class ImportWizardView2Controller {
     @FXML
     GridPane mapGridPane;
     
+    @FXML
+    Label statusLabel;
+    
     @PostConstruct
     public void init() throws FlowException {
         System.out.println("ImportWizardView2Controller.initialize()");
         ImportWizardData model = context.getRegisteredObject(ImportWizardData.class);
         //model.setFileName("Test2");
-        
+
+        // --- Source branching ---
+        // If a remote event was selected in View1, we are importing from a URL
+        // (race registration API). Otherwise we fall through to the local CSV
+        // file pipeline.
+        ArrayList<String> csvColumns = new ArrayList<>();
+        if (model.getSelectedRemoteEvent() != null) {
+            // --- URL import path ---
+            // Fetch the participants export from the provider adapter on a
+            // background thread (it performs real HTTP), then build the mapping
+            // grid the same way the file path does below. The ResultSet is kept
+            // in the model so View3 can import from it without a second fetch.
+            fetchRemoteParticipants(model, csvColumns);
+        } else {
+            // --- File import path (fully implemented) ---
+            // Detect the file encoding (UTF-8 BOM, strict UTF-8, or legacy fallback)
+            Charset charset = StandardCharsets.UTF_8;
+            try {
+                charset = CharsetDetector.detect(model.getFileName());
+                System.out.println("Detected charset: " + charset.name());
+            } catch (IOException ex) {
+                Logger.getLogger(ImportWizardView2Controller.class.getName())
+                        .log(Level.WARNING, "Unable to detect charset for " + model.getFileName(), ex);
+            }
+
+            ResultSet rs;
+            try {
+                rs = new Csv().read(model.getFileName(), null, charset.name());
+                ResultSetMetaData meta = rs.getMetaData();
+                for (int i = 0; i < meta.getColumnCount(); i++) {
+                    csvColumns.add(meta.getColumnLabel(i+1));
+                    System.out.println(meta.getColumnLabel(i+1));
+                }
+                int numAdded = 0;
+                while (rs.next()) { numAdded++; }
+                model.setNumToAdd(numAdded);
+
+            } catch (SQLException ex) {
+                Logger.getLogger(ImportWizardView2Controller.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            // The URL path builds the grid from a background task once its
+            // fetch completes; the file path can build it right away.
+            buildMappingGrid(model, csvColumns);
+        }
+    }
+
+    /**
+     * URL import path: fetch the selected event's participants from the
+     * provider adapter on a background thread (it performs real HTTP), keep
+     * the ResultSet in the model for View3, and build the mapping grid when
+     * the fetch completes. Next stays disabled while the fetch is in flight
+     * (and after a failure) so the user can't import against an empty map.
+     */
+    private void fetchRemoteParticipants(ImportWizardData model, ArrayList<String> csvColumns) {
+        RaceRegProvider provider = model.getSelectedProvider();
+        RemoteEvent event = model.getSelectedRemoteEvent();
+        if (provider == null || event == null) {
+            statusLabel.setText("Select an event first");
+            model.nextButtonDisabledProperty().set(true);
+            return;
+        }
+        // Never fall back to a stale participant set from a previous event if
+        // the fetch below fails.
+        model.setResultsSet(null);
+        model.nextButtonDisabledProperty().set(true);
+        statusLabel.setText("Fetching participants from " + provider.displayName() + "...");
+
+        Task<ParticipantExport> fetchTask = new Task<ParticipantExport>() {
+            @Override
+            protected ParticipantExport call() throws Exception {
+                return provider.fetchParticipants(event,
+                        model.getWebUsername(), model.getWebPassword());
+            }
+        };
+        fetchTask.setOnSucceeded(e -> Platform.runLater(() -> {
+            try {
+                ParticipantExport export = fetchTask.getValue();
+                ResultSet rs = export.getResultSet();
+                model.setResultsSet(rs);
+                ResultSetMetaData meta = rs.getMetaData();
+                for (int i = 0; i < meta.getColumnCount(); i++) {
+                    csvColumns.add(meta.getColumnLabel(i + 1));
+                    System.out.println(meta.getColumnLabel(i + 1));
+                }
+                // Count the rows for the View3 progress bar, then rewind so
+                // View3 can iterate the same ResultSet. H2's SimpleResultSet
+                // supports beforeFirst(); if a future provider returns a
+                // forward-only ResultSet this will throw and be logged.
+                int numToAdd = 0;
+                while (rs.next()) {
+                    numToAdd++;
+                }
+                try {
+                    rs.beforeFirst();
+                } catch (SQLException ex) {
+                    Logger.getLogger(ImportWizardView2Controller.class.getName())
+                            .log(Level.WARNING, "Unable to rewind participants ResultSet", ex);
+                }
+                model.setNumToAdd(numToAdd);
+                statusLabel.setText(numToAdd + " participant(s) loaded from " + provider.displayName());
+                // Offer to register any custom-attribute definitions the
+                // provider advertised, BEFORE the mapping grid is built so the
+                // new columns show up as mappable targets.
+                promptForCustomAttributes(export.getCustomAttributes());
+                buildMappingGrid(model, csvColumns);
+            } catch (Exception ex) {
+                Logger.getLogger(ImportWizardView2Controller.class.getName())
+                        .log(Level.SEVERE, null, ex);
+                statusLabel.setText("Failed to load participants: " + ex.getMessage());
+                model.nextButtonDisabledProperty().set(true);
+            }
+        }));
+        fetchTask.setOnFailed(e -> Platform.runLater(() -> {
+            Throwable ex = fetchTask.getException();
+            String msg = (ex == null || ex.getMessage() == null) ? "unknown error" : ex.getMessage();
+            statusLabel.setText("Failed to load participants: " + msg);
+            model.nextButtonDisabledProperty().set(true);
+        }));
+        Thread t = new Thread(fetchTask);
+        t.setDaemon(true);
+        t.setName("ImportWizard Participant Fetch");
+        t.start();
+    }
+
+    /**
+     * If the provider advertised custom-attribute definitions, offer to
+     * register the ones this event file doesn't already define. Runs on the
+     * FX thread (called from the fetch success handler) and must complete
+     * before {@link #buildMappingGrid} so the new attributes appear in the
+     * mapping ComboBoxes.
+     *
+     * <p>Matching is by name (case-insensitive); definitions that already
+     * exist in the event file are skipped, so re-fetching an event doesn't
+     * create duplicates or nag the user again. This is a simple list dialog
+     * for now — a dedicated wizard page can come later.
+     */
+    private void promptForCustomAttributes(List<CustomAttribute> advertised) {
+        if (advertised == null || advertised.isEmpty()) {
+            return;
+        }
+        // Only the definitions this event file doesn't have yet.
+        Set<String> existing = new HashSet<>();
+        ParticipantDAO.getInstance().getCustomAttributes().forEach(ca ->
+                existing.add(ca.getName().toLowerCase()));
+        List<CustomAttribute> fresh = new ArrayList<>();
+        for (CustomAttribute ca : advertised) {
+            if (!existing.contains(ca.getName().toLowerCase())) {
+                fresh.add(ca);
+            }
+        }
+        if (fresh.isEmpty()) {
+            return;
+        }
+
+        ListView<String> attrList = new ListView<>();
+        attrList.setPrefHeight(180);
+        fresh.forEach(ca -> attrList.getItems().add(
+                ca.getName() + "  (" + ca.getAttributeType() + ")"));
+        attrList.getSelectionModel().selectFirst();
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Custom Attributes");
+        dialog.setHeaderText("The event defines custom participant attributes. "
+                + "Set them up to map and import their values:");
+        dialog.getDialogPane().setContent(attrList);
+        ButtonType setup = new ButtonType("Set Up", ButtonBar.ButtonData.OK_DONE);
+        ButtonType skip = new ButtonType("Skip", ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialog.getDialogPane().getButtonTypes().addAll(setup, skip);
+        Optional<ButtonType> result = dialog.showAndWait();
+        if (result.isPresent() && result.get() == setup) {
+            fresh.forEach(ca -> ParticipantDAO.getInstance().saveCustomAttribute(ca));
+            statusLabel.setText("Added " + fresh.size() + " custom attribute definition(s)");
+        }
+    }
+
+    /**
+     * Build the CSV-column -> participant-attribute chooser grid from the
+     * columns of the current source (local CSV file or remote export), and
+     * populate the model's attribute map with the initial guesses. The Next
+     * button stays disabled when there are no columns to map, so the wizard
+     * can't proceed to the import step with an empty map.
+     */
+    private void buildMappingGrid(ImportWizardData model, List<String> csvColumns) {
         class AttributeMap {
             public SimpleStringProperty key = new SimpleStringProperty();
             public SimpleStringProperty value= new SimpleStringProperty();
@@ -80,42 +272,11 @@ public class ImportWizardView2Controller {
             }
             
         }
-        
-        // Let's play the "What type of text file is this..." game
-        // Try UTF-8 and see if it blows up on the decode. If it does, default down to a platform specific type and then hope for the best
-        // TODO: fix the "platform specific" part to not assume Windows in the US
-        CharsetDecoder uft8Decoder = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT);
-        String charset = "UTF-8"; 
-        try {
-             String result = new BufferedReader(new InputStreamReader(new FileInputStream(model.getFileName()),uft8Decoder)).lines().collect(Collectors.joining("\n"));
-         } catch (Exception ex) {
-             System.out.println("Not UTF-8: " + ex.getMessage());
-             charset = "Cp1252"; // Windows standard txt file stuff
-         }
-        
-        ResultSet rs;
-        ArrayList<String> csvColumns = new ArrayList<>();
-        ArrayList<ComboBox> comboBoxes = new ArrayList<>();
-        try {
-            rs = new Csv().read(model.getFileName(),null,charset);
-            ResultSetMetaData meta = rs.getMetaData();
-            for (int i = 0; i < meta.getColumnCount(); i++) {
-                csvColumns.add(meta.getColumnLabel(i+1));
-                System.out.println(meta.getColumnLabel(i+1));
-            }
-            int numAdded = 0;
-            while (rs.next()) { numAdded++; }
-            model.setNumToAdd(numAdded);
-            
-        } catch (SQLException ex) {
-            Logger.getLogger(ImportWizardView2Controller.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        
-        ObservableMap<String,String> participantAttributes = Participant.getAvailableAttributes();
+
         
         ObservableList<AttributeMap> attList = FXCollections.observableArrayList();
         attList.add(new AttributeMap("Ignore","Ignore"));
-        participantAttributes.entrySet().stream().forEach((entry) -> {
+        Participant.getAvailableAttributes().entrySet().stream().forEach((entry) -> {
             attList.add(new AttributeMap(entry.getKey(),entry.getValue()));
         });
         ParticipantDAO.getInstance().getCustomAttributes().forEach(ca -> {
@@ -130,6 +291,7 @@ public class ImportWizardView2Controller {
             
             
             
+        ArrayList<ComboBox> comboBoxes = new ArrayList<>();
         // display the colum -> attribute chooser maps
         mapGridPane.setPadding(new Insets(10,10,10,10));
         mapGridPane.setHgap(20);
@@ -158,6 +320,14 @@ public class ImportWizardView2Controller {
                     //System.out.println("Import: " + csvColumns.get(i).toLowerCase() + " matches " + entry.key.getValue().toLowerCase() );
                 }
             }
+        }
+        
+        // If nothing could be mapped, don't let the user proceed to the import
+        // step with an empty attribute map.
+        if (csvColumns.isEmpty()) {
+            model.nextButtonDisabledProperty().set(true);
+        } else {
+            model.nextButtonDisabledProperty().set(false);
         }
     }
     

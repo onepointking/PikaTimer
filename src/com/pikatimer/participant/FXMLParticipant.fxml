@@ -74,12 +74,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
       </HBox>
        <TableView fx:id="participantTableView" prefHeight="400.0" prefWidth="531.0" tableMenuButtonVisible="true" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="1" GridPane.vgrow="ALWAYS">
            <columns>
-               <TableColumn fx:id="bibNumberColumn" prefWidth="49.0" resizable="false" text="Bib #">
+               <TableColumn fx:id="bibNumberColumn" prefWidth="60.0" resizable="false" text="Bib #">
                  <cellValueFactory>
                      <PropertyValueFactory property="bib" />
                  </cellValueFactory>
              </TableColumn>
-             <TableColumn fx:id="firstNameColumn" prefWidth="71.0" text="First Name">
+             <TableColumn fx:id="firstNameColumn" prefWidth="100.0" text="First Name">
                  <cellValueFactory>
                      <PropertyValueFactory property="firstName" />
                  </cellValueFactory>
@@ -89,55 +89,54 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                      <PropertyValueFactory property="middleName" />
                  </cellValueFactory>
              </TableColumn>
-             <TableColumn fx:id="lastNameColumn" prefWidth="100" text="Last Name">
+             <TableColumn fx:id="lastNameColumn" prefWidth="120.0" text="Last Name">
                  <cellValueFactory>
                      <PropertyValueFactory property="lastName" />
                  </cellValueFactory>
              </TableColumn>
-             <TableColumn fx:id="ageColumn" prefWidth="32.0" text="Age">
+             <TableColumn fx:id="ageColumn" prefWidth="50.0" text="Age">
                  <cellValueFactory>
                      <PropertyValueFactory property="age" />
                  </cellValueFactory>
              </TableColumn>
-             <TableColumn fx:id="sexColumn" minWidth="8.0" prefWidth="32.0" text="Sex">
+             <TableColumn fx:id="sexColumn" minWidth="40.0" prefWidth="50.0" text="Sex">
                  <cellValueFactory>
                      <PropertyValueFactory property="sex" />
                  </cellValueFactory>
              </TableColumn>
-             <TableColumn fx:id="cityColumn" prefWidth="60.0" text="City">
+             <TableColumn fx:id="cityColumn" prefWidth="120.0" text="City">
                  <cellValueFactory>
                      <PropertyValueFactory property="city" />
                  </cellValueFactory>
              </TableColumn>
-             <TableColumn fx:id="stateColumn" prefWidth="41.0" text="State">
+             <TableColumn fx:id="stateColumn" prefWidth="60.0" text="State">
                  <cellValueFactory>
                      <PropertyValueFactory property="state" />
                  </cellValueFactory>
              </TableColumn>
-            <TableColumn fx:id="countryColumn" prefWidth="51.0" text="Country">
+            <TableColumn fx:id="countryColumn" prefWidth="100.0" text="Country">
                 <cellValueFactory>
                      <PropertyValueFactory property="country" />
                  </cellValueFactory>
              </TableColumn>
-            <TableColumn fx:id="raceColumn" prefWidth="124.0" text="Race/Wave" />
-            <TableColumn fx:id="statusColumn" prefWidth="124.0" text="Status" />
+            <TableColumn fx:id="raceColumn" prefWidth="140.0" text="Race/Wave" />
+            <TableColumn fx:id="statusColumn" prefWidth="140.0" text="Status" />
         </columns>  
         <sortOrder> 
              <fx:reference source="bibNumberColumn" />
              <fx:reference source="lastNameColumn" />
         </sortOrder>
        </TableView>
-      <HBox spacing="5.0" GridPane.hgrow="NEVER">
+      <VBox spacing="5.0" GridPane.hgrow="NEVER">
          <children>
-            <Button fx:id="importButton" focusTraversable="false" mnemonicParsing="false" onAction="#importParticipants" prefHeight="25.0" prefWidth="60.0" text="Import" textAlignment="CENTER" />
-            <Button fx:id="exportButton" mnemonicParsing="false" onAction="#exportParticipants" prefWidth="60.0" text="Export" />
-            <Pane maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS" />
-            <Button fx:id="clearButton" focusTraversable="false" mnemonicParsing="false" onAction="#clearParticipants" prefWidth="60.0" text="Clear All" textAlignment="CENTER" />
+            <Button fx:id="importButton" focusTraversable="false" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#importParticipants" text="Import..." textAlignment="CENTER" />
+            <Button fx:id="exportButton" focusTraversable="false" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#exportParticipants" text="Export" textAlignment="CENTER" />
+            <Button fx:id="clearButton" focusTraversable="false" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#clearParticipants" text="Clear All" textAlignment="CENTER" />
          </children>
          <padding>
             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
          </padding>
-      </HBox>
+      </VBox>
       <HBox alignment="CENTER_RIGHT" spacing="10.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="2">
          <children>
             <Button fx:id="customAtrtributesButton" mnemonicParsing="false" onAction="#setupCustomAttributes" text="Setup Custom Attributes..." />
@@ -157,7 +156,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               <Font size="14.0" />
                            </font>
                         </Label>
-                        <TextField fx:id="bibTextField" prefHeight="25.0" prefWidth="48.0" promptText="12345" HBox.hgrow="NEVER" />
+                        <TextField fx:id="bibTextField" prefHeight="25.0" prefWidth="90.0" promptText="12345" HBox.hgrow="ALWAYS" />
                      </children>
                   </HBox>
                   <HBox fx:id="raceHBox" alignment="CENTER_LEFT" spacing="2.0">
@@ -167,7 +166,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               <Font size="14.0" />
                            </font>
                         </Label>
-                        <CheckComboBox fx:id="waveComboBox" maxWidth="1.7976931348623157E308" prefHeight="25.0" prefWidth="62.0" HBox.hgrow="ALWAYS" />
+                        <CheckComboBox fx:id="waveComboBox" maxWidth="1.7976931348623157E308" prefHeight="25.0" prefWidth="190.0" HBox.hgrow="ALWAYS" />
                      </children>
                   </HBox>
                   <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308" spacing="2.0">
@@ -207,7 +206,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               <Font size="14.0" />
                            </font>
                         </Label>
-                        <DatePicker fx:id="birthdayDatePicker" maxWidth="1.7976931348623157E308" minWidth="-Infinity" prefHeight="25.0" prefWidth="135.0" promptText="Date of Birth" HBox.hgrow="ALWAYS" />
+                        <DatePicker fx:id="birthdayDatePicker" maxWidth="1.7976931348623157E308" minWidth="-Infinity" prefHeight="25.0" prefWidth="190.0" promptText="Date of Birth" HBox.hgrow="ALWAYS" />
                      </children>
                   </HBox>
                   <HBox alignment="CENTER_LEFT" spacing="2.0">
@@ -223,12 +222,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               <Font size="14.0" />
                            </font>
                         </Label>
-                        <Label minWidth="-Infinity" prefHeight="20.0" prefWidth="27.0" text="Sex">
+                        <Label minWidth="-Infinity" prefHeight="20.0" prefWidth="35.0" text="Sex">
                            <font>
                               <Font size="14.0" />
                            </font>
                         </Label>
-                        <TextField fx:id="sexTextField" minWidth="-Infinity" prefHeight="25.0" prefWidth="40.0" promptText="Sex" />
+                        <TextField fx:id="sexTextField" minWidth="-Infinity" prefHeight="25.0" prefWidth="70.0" promptText="Sex" />
                      </children>
                   </HBox>
                   <HBox fx:id="zipHBox" alignment="CENTER_LEFT" spacing="2.0">
@@ -238,7 +237,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               <Font size="14.0" />
                            </font>
                         </Label>
-                        <TextField fx:id="zipTextField" prefHeight="25.0" prefWidth="228.0" promptText="Zip Code" />
+                        <TextField fx:id="zipTextField" prefHeight="25.0" prefWidth="190.0" promptText="Zip Code" HBox.hgrow="ALWAYS" />
                      </children>
                   </HBox>
                   <HBox alignment="CENTER_LEFT" spacing="2.0">
@@ -248,7 +247,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               <Font size="14.0" />
                            </font>
                         </Label>
-                        <TextField fx:id="cityTextField" prefHeight="25.0" prefWidth="228.0" promptText="City" />
+                        <TextField fx:id="cityTextField" prefHeight="25.0" prefWidth="190.0" promptText="City" HBox.hgrow="ALWAYS" />
                      </children>
                   </HBox>
                   <HBox alignment="CENTER_LEFT" spacing="2.0">
@@ -258,7 +257,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                               <Font size="14.0" />
                            </font>
                         </Label>
-                        <TextField fx:id="stateTextField" minWidth="-Infinity" prefWidth="40.0" promptText="State" />
+                        <TextField fx:id="stateTextField" minWidth="-Infinity" prefWidth="190.0" promptText="State" HBox.hgrow="ALWAYS" />
                      </children>
                   </HBox>
                   <HBox fx:id="countryHBox" alignment="CENTER_LEFT" spacing="2.0">

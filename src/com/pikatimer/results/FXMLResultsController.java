@@ -886,7 +886,14 @@ public class FXMLResultsController  {
         processNewResultThread.setName("Thread-AutoUpdateReportsThread");
         processNewResultThread.setDaemon(true);
         processNewResultThread.start();
-        autoUpdateProgressBar.progressProperty().bind(autoUpdateTask.progressProperty());
+        // initialize() can be invoked off the FX Application Thread because
+        // FXMLopenEventController loads FXML on a background Task. Binding to
+        // a Task's properties (and touching the ProgressBar) must happen on
+        // the FX thread, otherwise Task.progressProperty() throws
+        // "Task must only be used from the FX Application Thread".
+        Platform.runLater(() -> {
+            autoUpdateProgressBar.progressProperty().bind(autoUpdateTask.progressProperty());
+        });
     }
     
     private void initializeOutputDestinations(){

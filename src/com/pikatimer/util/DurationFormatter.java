@@ -53,7 +53,7 @@ public class DurationFormatter {
         BigDecimal S = new BigDecimal(d.getNano()).divide(new BigDecimal(1000000000)).setScale(p, rm);
         //System.out.println("DurationFormatter::durationToString: H:" + H.toString() + " M:" + M.toString() + " s:" + s.toString() + " S:" + S.toPlainString());
         
-        if (p == 0 && S.compareTo(new BigDecimal(1)) == 0) {
+        if (S.compareTo(new BigDecimal(1)) == 0) {
             s+= 1;
             if (s==60){
                 s=0L;
@@ -63,7 +63,7 @@ public class DurationFormatter {
                     H++ ; 
                 }
             }
-            
+            S = new BigDecimal("0").setScale(p); // carry the rounded fraction into the seconds
         } 
         
         String r = "";
@@ -106,6 +106,11 @@ public class DurationFormatter {
         String[] tokens = format.split("\\.", -1);
         if (tokens.length > 1) precision = tokens[1].length();
         
+        // If the requested format has no sub-second digits, but the duration
+        // actually carries a fraction of a second, emit the fraction anyway
+        // (with as many digits as the value needs, up to milliseconds).
+        if (precision == 0 && d != null) precision = adaptivePrecision(d);
+        
         Boolean hours = true;
         if (format.contains("[HH:]")) hours = false;
         
@@ -115,5 +120,19 @@ public class DurationFormatter {
         if (roundingMode.equals("Up")) rm = RoundingMode.UP;
         
         return durationToString(d,precision,hours,rm);
+    }
+    
+    /**
+     * Determine how many sub-second digits a duration needs, based on the
+     * fraction it actually carries: 0 for whole seconds, 1 for tenths,
+     * 2 for hundredths, 3 otherwise (millisecond precision).
+     * Uses Math.abs so it works for negative durations too.
+     */
+    private static int adaptivePrecision(Duration d) {
+        int nano = Math.abs(d.getNano());
+        if (nano == 0) return 0;
+        if (nano % 100000000 == 0) return 1; // x.1 increments
+        if (nano % 10000000 == 0) return 2;  // x.01 increments
+        return 3;                            // x.001 increments
     }
 }

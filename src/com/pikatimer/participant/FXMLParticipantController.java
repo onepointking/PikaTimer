@@ -15,6 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.pikatimer.participant;
+import com.pikatimer.PikaPreferences;
 import com.pikatimer.event.Event;
 import com.pikatimer.race.Race;
 import com.pikatimer.race.RaceDAO;
@@ -326,11 +327,43 @@ public class FXMLParticipantController  {
 
         // 5. Add sorted (and filtered) data to the table.
         participantTableView.setItems(sortedParticipantsList);
-        
+
         // Set the bib number to be an alphanumeric sort
         bibNumberColumn.setComparator(new AlphanumericComparator());
         bibNumberColumn.setStyle( "-fx-alignment: CENTER-RIGHT;");
-        
+
+        // Restore any previously-saved column widths. The TableView lays out
+        // columns asynchronously, so we wait for the scene to be available
+        // and then schedule the restore on the next pulse; without this,
+        // calling setPrefWidth() during initialize() is ignored because the
+        // layout pass hasn't happened yet.
+        final String COL_PREF_KEY = "participantTable";
+        final PikaPreferences pikaPrefs = PikaPreferences.getInstance();
+        participantTableView.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene == null) return;
+            Platform.runLater(() -> {
+                ObservableList<TableColumn<Participant, ?>> cols = participantTableView.getColumns();
+                for (int i = 0; i < cols.size(); i++) {
+                    double saved = pikaPrefs.getSavedColumnWidth(COL_PREF_KEY, i);
+                    if (saved > 0) {
+                        cols.get(i).setPrefWidth(saved);
+                    }
+                }
+            });
+        });
+
+        // Save the current column widths whenever the window is about to
+        // close so the user only has to size things once.
+        participantTableView.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene == null) return;
+            newScene.windowProperty().addListener((o, oldWin, newWin) -> {
+                if (newWin == null) return;
+                newWin.setOnCloseRequest(e -> {
+                    pikaPrefs.saveColumnWidths(COL_PREF_KEY, participantTableView.getColumns());
+                });
+            });
+        });
+
         listSizeLabel.textProperty().bind(Bindings.size(participantsList).asString());
         filteredSizeLabel.textProperty().bind(Bindings.size(sortedParticipantsList).asString());
         
@@ -964,7 +997,7 @@ public class FXMLParticipantController  {
         removeParticipants(FXCollections.observableArrayList(participantTableView.getSelectionModel().getSelectedItems()));
         participantTableView.getSelectionModel().clearSelection();
     }
-    
+
     public void importParticipants(ActionEvent fxevent) throws FlowException{
         // todo
         Stage importStage = new Stage();
@@ -972,13 +1005,31 @@ public class FXMLParticipantController  {
         Flow flow  = new Flow(ImportWizardController.class);
         
         FlowHandler flowHandler = flow.createHandler();
-
         StackPane pane = flowHandler.start(new DefaultFlowContainer());
-        
-        importStage.setScene(new Scene(pane));
+
+        // Set an explicit preferred size for the returned pane and create the
+        // scene with fixed dimensions. Avoid calling sizeToScene(), which
+        // can pick up oversized preferred sizes from animated containers
+        // and cause excessive blank space in the dialog.
+        pane.setPrefSize(620, 480);
+        Scene scene = new Scene(pane, 620, 480);
+
+        importStage.setScene(scene);
         importStage.initModality(Modality.APPLICATION_MODAL);
         importStage.setTitle("Import Participants...");
-        importStage.show(); 
+        importStage.setMinWidth(620);
+        importStage.setMinHeight(480);
+        importStage.showAndWait();
+        
+        // The wizard may have created custom-attribute definitions (the URL
+        // path's setup dialog) and imported participants that reference them.
+        // The participants list is observable, so the new rows appear on
+        // their own, but the custom-attribute table columns were built at
+        // startup — rebuild them here so newly-defined attributes (e.g.
+        // "ward") show up without the user having to click "Setup Custom
+        // Attributes". Idempotent: with no new definitions this just
+        // recreates the same columns.
+        displayCustomAttributes();
        
     }
     

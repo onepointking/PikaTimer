@@ -75,7 +75,7 @@ public class Pikatimer extends Application {
         //stash the primaryStage in the event object
         mainStage=primaryStage;
         
-        primaryStage.setTitle("PikaTimer " + VERSION);
+        primaryStage.setTitle("PikaTimer X Longboat " + VERSION);
         
         mainStage.setWidth(600);
         mainStage.setHeight(400);

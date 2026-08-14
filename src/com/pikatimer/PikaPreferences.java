@@ -69,9 +69,38 @@ public class PikaPreferences {
     public void setDBLoaded(){
         dbLoaded = true;
     }
-    
+
     public Boolean getDBLoaded(){
         return dbLoaded;
     }
-    
+
+    /**
+     * Save the visible-width state of a set of JavaFX TableColumns to the
+     * global preferences store so we can restore them on the next launch.
+     *
+     * @param tableName  logical name of the table (e.g. "participant")
+     * @param columns    the columns to persist, in the order they currently
+     *                   appear in the TableView
+     */
+    public void saveColumnWidths(String tableName, javafx.collections.ObservableList<? extends javafx.scene.control.TableColumn<?, ?>> columns) {
+        if (tableName == null || columns == null) return;
+        int i = 0;
+        for (javafx.scene.control.TableColumn<?, ?> col : columns) {
+            // Only persist columns that the user can actually see; hidden ones
+            // would record 0 width and undo themselves on the next launch.
+            if (col.isVisible()) {
+                prefs.putDouble(tableName + ".col." + i + ".width", col.getWidth());
+            }
+            i++;
+        }
+    }
+
+    /**
+     * Read a previously-saved width for the column at the given index, or
+     * {@code -1} if no value was stored.
+     */
+    public double getSavedColumnWidth(String tableName, int index) {
+        return prefs.getDouble(tableName + ".col." + index + ".width", -1);
+    }
+
 }

@@ -25,6 +25,10 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
 /**
  *
@@ -32,6 +36,22 @@ import javafx.beans.property.StringProperty;
  */
 class ImportWizardData {
     private final StringProperty filename = new SimpleStringProperty();
+    private final StringProperty sourceURL = new SimpleStringProperty();
+    private final StringProperty webUsername = new SimpleStringProperty();
+    private final StringProperty webPassword = new SimpleStringProperty();
+    // The race-reg provider adapter chosen by the user (or auto-detected
+    // from the URL). View1's provider ComboBox writes to this; fetchEvents()
+    // and (eventually) View2/View3 delegate to it. Null until set.
+    private final ObjectProperty<RaceRegProvider> selectedProvider = new SimpleObjectProperty<>();
+    // Remote event picker state for the web import flow.
+    // The provider's /events endpoint is queried once the user enters a base
+    // URL + credentials; the resulting RemoteEvent list is exposed here so the
+    // View1 ComboBox can bind to it. selectedRemoteEvent is what View2/View3
+    // will eventually use to fetch the participants export.
+    private final ObservableList<RemoteEvent> remoteEvents = FXCollections.observableArrayList();
+    private final ObjectProperty<RemoteEvent> selectedRemoteEvent = new SimpleObjectProperty<>();
+    private final BooleanProperty fetchingEvents = new SimpleBooleanProperty(false);
+    private final StringProperty fetchEventsStatus = new SimpleStringProperty();
     private final BooleanProperty waveAssignByBib = new SimpleBooleanProperty();
     private final BooleanProperty waveAssignByAttribute = new SimpleBooleanProperty();
     private final BooleanProperty clearExistingAttribute = new SimpleBooleanProperty();
@@ -60,6 +80,106 @@ class ImportWizardData {
         return filename; 
     }        
     
+    public String getSourceURL() {
+        return sourceURL.getValueSafe();
+    }
+    public void setSourceURL(String url) {
+        sourceURL.setValue(url);
+    }
+    public StringProperty sourceURLProperty() {
+        return sourceURL;
+    }
+    
+    public String getWebUsername() {
+        return webUsername.getValueSafe();
+    }
+    public void setWebUsername(String username) {
+        webUsername.setValue(username);
+    }
+    public StringProperty webUsernameProperty() {
+        return webUsername;
+    }
+    
+    public String getWebPassword() {
+        return webPassword.getValueSafe();
+    }
+    public void setWebPassword(String password) {
+        webPassword.setValue(password);
+    }
+    public StringProperty webPasswordProperty() {
+        return webPassword;
+    }
+
+    /**
+     * The provider adapter currently in effect for the web import flow.
+     * Set by the View1 provider ComboBox (either manually or via URL
+     * auto-detect); read by fetchEvents() and, later, by View2/View3 to
+     * fetch participants.
+     */
+    public RaceRegProvider getSelectedProvider() {
+        return selectedProvider.get();
+    }
+    public void setSelectedProvider(RaceRegProvider p) {
+        selectedProvider.set(p);
+    }
+    public ObjectProperty<RaceRegProvider> selectedProviderProperty() {
+        return selectedProvider;
+    }
+
+    /**
+     * The list of events returned by the remote provider's {@code /events}
+     * endpoint. Bound to the View1 event ComboBox; cleared and repopulated
+     * whenever a fetch completes.
+     */
+    public ObservableList<RemoteEvent> getRemoteEvents() {
+        return remoteEvents;
+    }
+
+    /**
+     * The event the user picked from the list, or null if none selected.
+     * View2/View3 will use this (together with the base sourceURL) to fetch
+     * the participants export.
+     */
+    public RemoteEvent getSelectedRemoteEvent() {
+        return selectedRemoteEvent.get();
+    }
+    public void setSelectedRemoteEvent(RemoteEvent e) {
+        selectedRemoteEvent.set(e);
+    }
+    public ObjectProperty<RemoteEvent> selectedRemoteEventProperty() {
+        return selectedRemoteEvent;
+    }
+
+    /**
+     * True while a background fetch of the event list is in flight. The View1
+     * UI uses this to disable the event ComboBox and show a "Fetching..."
+     * indicator, and to keep the Next button disabled until the fetch settles.
+     */
+    public Boolean isFetchingEvents() {
+        return fetchingEvents.get();
+    }
+    public void setFetchingEvents(boolean b) {
+        fetchingEvents.set(b);
+    }
+    public BooleanProperty fetchingEventsProperty() {
+        return fetchingEvents;
+    }
+
+    /**
+     * Human-readable status for the last event-list fetch: empty on success,
+     * an error message on failure, or a transient hint ("Fetching...") while
+     * in flight. Bound to the View1 status label under the event ComboBox.
+     */
+    public String getFetchEventsStatus() {
+        return fetchEventsStatus.getValueSafe();
+    }
+    public void setFetchEventsStatus(String s) {
+        fetchEventsStatus.set(s);
+    }
+    public StringProperty fetchEventsStatusProperty() {
+        return fetchEventsStatus;
+    }
+
     public StringProperty duplicateHandlingProperty(){
         return duplicateHandlingAttribute;
     }

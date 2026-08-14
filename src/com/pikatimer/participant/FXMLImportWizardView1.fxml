@@ -22,28 +22,105 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox spacing="5.0" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1">
+<ScrollPane fitToWidth="true" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1">
+  <content>
+   <VBox spacing="5.0">
    <children>
-      <HBox alignment="CENTER_LEFT" spacing="2.0">
+      <HBox alignment="CENTER_LEFT" spacing="10.0">
          <children>
-            <Label text="File:">
-               <font>
-                  <Font size="16.0" />
-               </font>
-            </Label>
-            <TextField fx:id="fileTextField" promptText="Participants File" />
-            <Button fx:id="fileChooserButton" alignment="CENTER" mnemonicParsing="false" text="Select..." textAlignment="CENTER" />
+            <RadioButton fx:id="fileSourceRadioButton" mnemonicParsing="false" selected="true" text="Import from File">
+               <toggleGroup>
+                  <ToggleGroup fx:id="sourceToggleGroup" />
+               </toggleGroup>
+            </RadioButton>
+            <RadioButton fx:id="webSourceRadioButton" mnemonicParsing="false" text="Import from Web (Race Reg API)" toggleGroup="$sourceToggleGroup" />
          </children>
-         <opaqueInsets>
-            <Insets />
-         </opaqueInsets>
       </HBox>
-      <Label fx:id="fileStatusLabel" />
+      <VBox fx:id="fileSourceVBox" spacing="5.0">
+         <children>
+            <HBox alignment="CENTER_LEFT" spacing="2.0">
+               <children>
+                  <Label text="File:">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                  </Label>
+                  <TextField fx:id="fileTextField" promptText="Participants File" />
+                  <Button fx:id="fileChooserButton" alignment="CENTER" mnemonicParsing="false" text="Select..." textAlignment="CENTER" />
+               </children>
+               <opaqueInsets>
+                  <Insets />
+               </opaqueInsets>
+            </HBox>
+            <Label fx:id="fileStatusLabel" />
+         </children>
+      </VBox>
+      <VBox fx:id="webSourceVBox" spacing="5.0" visible="false" managed="false">
+         <children>
+            <HBox alignment="CENTER_LEFT" spacing="2.0">
+               <children>
+                  <Label text="Provider:">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                  </Label>
+                  <ComboBox fx:id="providerComboBox" maxWidth="1.7976931348623157E308" promptText="Select a race reg provider" HBox.hgrow="ALWAYS" />
+               </children>
+            </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="2.0">
+               <children>
+                  <Label text="URL:">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                  </Label>
+                  <TextField fx:id="urlTextField" maxWidth="1.7976931348623157E308" promptText="https://... (race registration API endpoint)" HBox.hgrow="ALWAYS" />
+               </children>
+            </HBox>
+            <Label fx:id="urlStatusLabel" textFill="RED" />
+            <HBox alignment="CENTER_LEFT" spacing="2.0">
+               <children>
+                  <Label text="Username:">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                  </Label>
+                  <TextField fx:id="usernameTextField" promptText="Username" HBox.hgrow="ALWAYS" />
+               </children>
+            </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="2.0">
+               <children>
+                  <Label text="Password:">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                  </Label>
+                  <PasswordField fx:id="passwordTextField" promptText="Password" HBox.hgrow="ALWAYS" />
+               </children>
+            </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="5.0">
+               <children>
+                  <Button fx:id="fetchEventsButton" mnemonicParsing="false" text="Fetch Events" />
+                  <Label text="Event:">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                  </Label>
+                  <ComboBox fx:id="remoteEventComboBox" maxWidth="1.7976931348623157E308" promptText="Select an event from the provider" HBox.hgrow="ALWAYS" />
+               </children>
+            </HBox>
+            <Label fx:id="fetchEventsStatusLabel" textFill="RED" />
+         </children>
+      </VBox>
       <CheckBox fx:id="clearExistingCheckBox" mnemonicParsing="false" text="Clear existing participants" />
       <HBox fx:id="duplicateHandlingHBox" alignment="CENTER_LEFT" spacing="4.0">
          <children>
@@ -78,3 +155,5 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
       <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
    </padding>
 </VBox>
+  </content>
+</ScrollPane>
